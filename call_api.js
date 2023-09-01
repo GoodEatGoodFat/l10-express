@@ -34,92 +34,88 @@ const tasks = [
   },
 ];
 
-//id: /:id --
-//
+//if add an input validation check
+// function inputValidation(inputString) {}
 
-const filterTasks = () => {};
-
+//get all, get by  query ?description=xxx
 apiCall.get("", (req, res) => {
   var queryLength = Object.keys(req.query).length;
   if (queryLength) {
-    //输入的query是string，tasks中的done是boolean
-    //都会被转换成number。 sting是NaN，true是1.
-    const doneValue = req.query.done === "true";
-    res.status(200).send(tasks.filter((task) => task.done === doneValue));
-  } else {
-    res.status(200).send(tasks);
-  }
+    const queryTask = tasks.filter((task) =>
+      task.description.includes(req.query.description)
+    );
+    res.send(queryTask);
+    return;
+  } else res.send(tasks);
 });
 
 apiCall.get("/:id", (req, res) => {
-  const taskById = tasks.filter((task) => task.id === parseInt(req.params.id));
-  if (taskById.length) {
-    res.status(200).send(taskById);
-  } else {
-    res.status(400).send(`there is no task with ID ${req.params.id}`);
+  //get :id
+  const inputId = req.params.id;
+  const inputIdInt = parseInt(inputId);
+  if (inputId === undefined || isNaN(inputIdInt)) {
+    return res.send("please input a valid task id");
   }
+
+  const taskById = tasks.filter((task) => task.id === inputIdInt);
+  // console.log(taskById);
+  //return a array
+  res.send(taskById[0]);
 });
 
 apiCall.put("/:id", (req, res) => {
   //1.find id
-  const idValue = parseInt(req.params.id);
-  const newDescription = req.body.description;
-  const newDone = req.body.done === "true";
-
-  const taskById = tasks.findIndex((task) => task.id === idValue);
-  //2.update
-  //if no ID, return error.
-  //task[] = newvalue
-  //reutrn a success text
-  if (taskById === -1) {
-    res.status(400).send(`there is no ID ${idValue}`);
-  } else {
-    // tasks[taskById].id = idValue; //no need to update the id.
-    tasks[taskById].description = newDescription;
-    tasks[taskById].done = newDone;
-    // if we need a function to update the done status of the task:
-    //tasks[].done = !newDone
+  const inputId = req.params.id;
+  const inputIdInt = parseInt(inputId);
+  if (inputId === undefined || isNaN(inputIdInt)) {
+    return res.send("please input a valid task id");
   }
 
-  res.status(200).send(tasks[taskById]);
+  // put description
+  const newDescription = req.body.description;
+
+  const taskById = tasks.findIndex((task) => task.id === inputIdInt);
+
+  if (taskById === -1) {
+    res.send("no ID found");
+  } else {
+    // tasks[taskById].id = inputId; //no need to update the id.
+    tasks[taskById].description = newDescription;
+    tasks[taskById].done = !tasks[taskById].done;
+  }
+  console.log(tasks[taskById]);
+  res.send(tasks[taskById]);
 });
 
 //
-apiCall.post("/", (req, res) => {
-  /**
-   * if no id, push to end, give a increment id.
-   * This function depends on the structure and the need.
-   * if user can setup their own id by themself, the primary key should be untouchable by users.
-   * then the tasks[].id should be only be used for mark or secondary key.
-   * if (req.body.id === undefined) {
-   * tasks.push({});
-   * tasks[tasks.length - 1].id = tasks.length;
-   * tasks[tasks.length - 1].description = req.body.description;
-   * tasks[tasks.length - 1].done = req.body.done;
-   * res.send({ msg: `updated, id is ${tasks[tasks.length - 1].id}` });
-   * } else
-   *
-   */
+const idCount = (function () {
+  let counter = tasks.length;
+  return function () {
+    return ++counter;
+  };
+})();
 
-  //if id is not conflict, add the body to the end.
-  if (tasks.findIndex((task) => task.id === req.body.id) === -1) {
-    tasks.push(req.body);
-    res.status(201).send({ msg: "updated" });
+apiCall.post("/", (req, res) => {
+  if (req.body.description !== undefined) {
+    tasks.push({});
+    tasks.at(-1).id = idCount();
+    tasks.at(-1).description = req.body.description;
+    //default task done to false
+    tasks.at(-1).done = false;
+    res.send(tasks.at(-1));
   } else {
-    //if conflict, return msg.
-    res.status(400).send({ msg: "the selected id is occupied" });
+    //if conflict, return empty.
+    res.send([]);
   }
 });
 
 apiCall.delete("/:id", (req, res) => {
-  const delID = tasks.findIndex((task) => {
-    task.id === id;
-  });
-  if (delID === -1) {
-    res.status(202).send({ msg: "no ID found" });
+  const delID = parseInt(req.params.id);
+  const delIndex = tasks.findIndex((task) => task.id === delID);
+  if (delID === NaN || delIndex === -1) {
+    res.send([]);
   } else {
-    tasks.splice(req.params.id, 1);
-    res.status(204).send({ msg: "the task is deleted" });
+    res.send(tasks.splice(delIndex, 1));
   }
 });
 
